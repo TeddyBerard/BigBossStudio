@@ -11,7 +11,7 @@ import UIKit
 class FilmViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
 
     @IBOutlet weak var tableView: UITableView!
-    var myFilm: film?
+    var myFilm: Movie?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -52,7 +52,7 @@ class FilmViewController: UIViewController, UITableViewDelegate, UITableViewData
         setSpacing(label: cell.producerLabel)
         setSpacing(label: cell.personnageLabel)
 
-        cell.personnageLabel.text = allPersonnage()
+        cell.personnageLabel.text = allCharacters()
 
         return cell
     }
@@ -77,12 +77,13 @@ class FilmViewController: UIViewController, UITableViewDelegate, UITableViewData
         return "\(day) \(monthName) \(years)"
     }
 
-    func allPersonnage() -> String {
+    func allCharacters() -> String {
         var Arr = [String]()
-        for perso in (myFilm?.personnages)! {
-            Arr.append(perso.name)
+        for character in (myFilm?.characters)! {
+            Arr.append(character.name)
         }
-        return Arr.joined(separator: ", ")
+       let allCharacters = Arr.filter {$0 != ""}
+       return allCharacters.joined(separator: ", ")
     }
 
     func customTableView() {

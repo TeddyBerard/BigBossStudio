@@ -7,20 +7,37 @@
 //
 
 import UIKit
+import Alamofire
+import SwiftyJSON
 
 class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
 
     @IBOutlet weak var tableView: UITableView!
     @IBOutlet weak var filtreLabel: UILabel!
     
-    var myFilms: allFilms = allFilms(count: 0, results: [film]())
+    var myMovies = AllMovie()
+    var countMovie = 0
     var filtre = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        getNotif()
         getData()
         customTableView()
+    }
+    
+    func getNotif() {
+        let name = Notification.Name(rawValue: "movieDonwload")
+        NotificationCenter.default.addObserver(
+        self, selector: #selector(reloadViewWhenMovieDownloaded),
+        name: name, object: nil)
+    }
+    
+    @objc func reloadViewWhenMovieDownloaded() {
+        self.filtreByStory()
+        countMovie += 1
+        tableView.reloadData()
     }
 
     func customTableView() {
@@ -32,17 +49,14 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
     }
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        if myFilms.count == 0 {
-            return 0
-        }
-        return myFilms.count
+        return countMovie
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "FilmTableViewCell", for: indexPath) as!
         FilmTableViewCell
 
-        let film = myFilms.results[indexPath.row]
+        let film = myMovies.results[indexPath.row]
 
         let id = film.episode_id
 
@@ -74,62 +88,27 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
     }
 
     func filtreByRelease() {
-        self.myFilms.results.sort(by: { $0.release_date < $1.release_date })
+        self.myMovies.results.sort(by: { $0.release_date < $1.release_date })
     }
 
     func filtreByStory() {
-        self.myFilms.results.sort(by: { $0.episode_id < $1.episode_id })
+        self.myMovies.results.sort(by: { $0.episode_id < $1.episode_id })
     }
 
     func getData() {
-        let urlJson = "https://swapi.co/api/films/?format=json"
-        guard let url = URL(string: urlJson) else { return  }
-
-        URLSession.shared.dataTask(with: url) { (data, _, err) in
-            guard let data = data else {
-                print("Error download")
-                return }
-            do {
-                let films = try JSONDecoder().decode(allFilms.self, from: data)
-                self.myFilms = films
-                self.filtreByStory()
-                DispatchQueue.main.async {
-                    for id in 0..<self.myFilms.results.count {
-                        self.donwloadPersonnages(id: id)
-                    }
-                    self.tableView.reloadData()
-                }
-            } catch let err {
-                print("some errors =\(err)")
-            }
-        }.resume()
-    }
-
-    func donwloadPersonnages(id: Int) {
-        self.myFilms.results[id].personnages = [personnage]()
-        for urlJson in myFilms.results[id].characters {
-            guard let url = URL(string: urlJson) else { return  }
-            URLSession.shared.dataTask(with: url) { (data, _, err) in
-                guard let data = data else {
-                    print("Error download")
-                    return }
-                do {
-                    let perso = try JSONDecoder().decode(personnage.self, from: data)
-                    DispatchQueue.main.async {
-                        self.myFilms.results[id].personnages?.append(perso)
-                    }
-                } catch let err {
-                    print("some errors =\(err)")
-                }
-            }.resume()
+        Alamofire.request("https://swapi.co/api/films/?format=json").responseJSON { response in
+            let jsonResult = JSON(response.data!)
+            self.myMovies.setMovies(json: jsonResult)
         }
     }
+    
+    
 
     func nextView(id: Int) {
         let storyBoard: UIStoryboard = UIStoryboard(name: "Main", bundle: nil)
         let newViewController = storyBoard.instantiateViewController(withIdentifier: "FilmViewController")
             as! FilmViewController
-        newViewController.myFilm = myFilms.results[id]
+        newViewController.myFilm = myMovies.results[id]
         self.navigationController?.pushViewController(newViewController, animated: true)
     }
 }
